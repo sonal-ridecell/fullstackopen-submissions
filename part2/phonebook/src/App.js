@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import axios from 'axios'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
+import personService from './services/persons'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
@@ -12,11 +12,10 @@ const App = () => {
 
   useEffect(() => {
     console.log('effect')
-    axios
-      .get('http://localhost:3001/persons')
+    personService
+      .getAll()
       .then(response => {
-        console.log('promise fulfilled')
-        setPersons(response.data)
+        setPersons(response)
       })
   }, [])
   console.log('render', persons.length, 'persons')
@@ -36,17 +35,33 @@ const App = () => {
     setSearch(event.target.value)
   }
 
+  const handleDelete = (id) => {
+    let personToDelete = persons.find(person => person.id === id)
+    if (window.confirm(`Delete ${personToDelete.name}?`)) {
+      personService
+        .destroy(id)
+        .then(res => setPersons(persons.filter(person => person.id !== id)))
+    }
+  }
+
   const addPerson = (event) => {
     event.preventDefault()
+    const personObject = {
+      name: newName,
+      number: newNumber,
+    }
     if (persons.some(person => person.name === newName)) {
-      alert(`${newName} is already added to phonebook`)
+      if (window.confirm(`${newName} is already added to phonebook, replace?`)) {
+        let personToReplace = persons.find(person => person.name === newName)
+        personService
+          .update(personToReplace.id, personObject)
+          .then(returnedPerson => setPersons(persons.map(person => person.name === newName ? returnedPerson : person)))
+      }
     }
     else {
-      const personObject = {
-        name: newName,
-        number: newNumber,
-      }
-      setPersons(persons.concat(personObject))
+      personService
+        .create(personObject)
+        .then(response => setPersons(persons.concat(response)))
     }
     setNewName('')
     setNewNumber('')
@@ -69,7 +84,7 @@ const App = () => {
         handleNewNumber={handleNewNumber}
       />
       <h2>Numbers</h2>
-      <Persons persons={filteredPersons} />
+      <Persons persons={filteredPersons} handleDelete={handleDelete}/>
     </div>
   )
 }
