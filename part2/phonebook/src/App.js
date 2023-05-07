@@ -4,11 +4,24 @@ import PersonForm from './components/PersonForm'
 import Persons from './components/Persons'
 import personService from './services/persons'
 
+const Notification = ({ message }) => {
+  if (message === null) {
+    return null
+  }
+
+  return (
+    <div className={ message[1] }>
+      {message[0]}
+    </div>
+  )
+}
+
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [search, setSearch] = useState('')
+  const [notif, setNotif] = useState(null)
 
   useEffect(() => {
     console.log('effect')
@@ -41,6 +54,10 @@ const App = () => {
       personService
         .destroy(id)
         .then(res => setPersons(persons.filter(person => person.id !== id)))
+        .catch(error => {
+          setNotif([`Looks like ${personToDelete.name} is already deleted.`, 'error'])
+          setTimeout(() => setNotif(null), 5000)
+        })
     }
   }
 
@@ -56,13 +73,21 @@ const App = () => {
         personService
           .update(personToReplace.id, personObject)
           .then(returnedPerson => setPersons(persons.map(person => person.name === newName ? returnedPerson : person)))
+          .catch(error => {
+            setNotif([`Looks like ${personToReplace.name} is already deleted.`, 'error'])
+            setTimeout(() => setNotif(null), 5000)
+            setPersons(persons.filter(person => person.name !== personToReplace.name))
+          })
+        setNotif([`${newName} updated!`, 'success']);
       }
     }
     else {
       personService
         .create(personObject)
         .then(response => setPersons(persons.concat(response)))
+      setNotif([`${newName} updated!`, 'success']);
     }
+    setTimeout(() => setNotif(null), 5000)
     setNewName('')
     setNewNumber('')
   }
@@ -75,6 +100,7 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={notif} />
       <Filter search={search} handleSearchChange={handleSearchChange} />
       <PersonForm 
         addPerson={addPerson}
